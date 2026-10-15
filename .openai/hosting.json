@@ -1,4 +1,4 @@
 {
   "project_id": "appgprj_6ad0fab7b4088191a2cf48caef9e856a",
-  "static": { "directory": "apps/web/dist" }
+  "static": { "directory": "dist" }
 }
