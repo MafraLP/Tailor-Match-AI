@@ -2,5 +2,16 @@
   "name": "@tailor-match/bridge",
   "private": true,
   "type": "module",
-  "scripts": { "check": "node --check src/index.js" }
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "npm run build && node --test dist"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
 }

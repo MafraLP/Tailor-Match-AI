@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "npm run dev --workspace @tailor-match/web",
     "build": "npm run build --workspace @tailor-match/web",
-    "test": "npm run test --workspace @tailor-match/web"
+    "test": "npm run test --workspace @tailor-match/web && npm run test --workspace @tailor-match/bridge",
+    "bridge": "npm run dev --workspace @tailor-match/bridge"
   }
 }

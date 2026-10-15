@@ -10,7 +10,7 @@ O projeto prioriza clareza e integridade: uma competência só é apresentada co
 
 ### Estado atual
 
-Os Milestones 1 e 2 estão concluídos e entregam uma interface Vue 3 + Quasar com:
+Os Milestones 1, 2 e 3 estão concluídos e entregam uma interface Vue 3 + Quasar com:
 
 - formulário de perfil, experiência e histórias brutas;
 - entrada de URL e descrição de vaga;
@@ -18,9 +18,9 @@ Os Milestones 1 e 2 estão concluídos e entregam uma interface Vue 3 + Quasar c
 - persistência de rascunhos no IndexedDB do navegador;
 - importação local de PDF com extração de texto revisável, sem upload;
 - normalização local do texto da vaga e prévia do pacote de contexto;
-- um shell de bridge local em Node.js para futuras integrações de IA.
+- bridge local em Node.js/TypeScript com estratégias fake, CLI e BYOK.
 
-Leitura de URL, integração com CLIs/LLMs, BYOK e geração de CV ainda não foram implementados. PDFs escaneados sem texto selecionável exigem correção manual nesta etapa. Consulte o [roadmap interno](docs/private/roadmap.md) apenas no checkout local; ele é intencionalmente ignorado pelo Git.
+Leitura de URL e geração de CV ainda não foram implementadas. A bridge exige execução local; Codex/Claude devem estar instalados e autenticados quando selecionados. PDFs escaneados sem texto selecionável exigem correção manual nesta etapa. Consulte o [roadmap interno](docs/private/roadmap.md) apenas no checkout local; ele é intencionalmente ignorado pelo Git.
 
 ### Privacidade
 
@@ -35,6 +35,12 @@ Requer Node.js 20+ e npm.
 ```bash
 npm install
 npm run dev
+```
+
+Em outro terminal, inicie a bridge local antes de testar uma integração:
+
+```bash
+npm run bridge
 ```
 
 Para gerar o build de produção:
@@ -68,7 +74,7 @@ The project favors clarity and integrity: a skill is represented as experience o
 
 ### Current status
 
-Milestones 1 and 2 are complete and provide a Vue 3 + Quasar interface with:
+Milestones 1, 2, and 3 are complete and provide a Vue 3 + Quasar interface with:
 
 - forms for profile, work experience, and raw stories;
 - URL and pasted job-description inputs;
@@ -76,9 +82,9 @@ Milestones 1 and 2 are complete and provide a Vue 3 + Quasar interface with:
 - browser-local draft persistence through IndexedDB;
 - local PDF import with reviewable text extraction and no upload;
 - local job-text normalization and a context-package preview;
-- a local Node.js bridge shell for upcoming AI integrations.
+- a local Node.js/TypeScript bridge with fake, CLI, and BYOK strategies.
 
-URL extraction, CLI/LLM integrations, BYOK, and CV generation are not implemented yet. Scanned PDFs without selectable text need manual correction at this stage. The internal roadmap is intentionally Git-ignored and remains available only in a local checkout.
+URL extraction and CV generation are not implemented yet. The bridge must run locally, and Codex/Claude must be installed and authenticated when selected. Scanned PDFs without selectable text need manual correction at this stage. The internal roadmap is intentionally Git-ignored and remains available only in a local checkout.
 
 ### Privacy
 
@@ -93,6 +99,12 @@ Requires Node.js 20+ and npm.
 ```bash
 npm install
 npm run dev
+```
+
+Start the local bridge in another terminal before testing an integration:
+
+```bash
+npm run bridge
 ```
 
 Build the production assets with:
