@@ -10,15 +10,17 @@ O projeto prioriza clareza e integridade: uma competência só é apresentada co
 
 ### Estado atual
 
-O Milestone 1 está concluído e entrega uma interface Vue 3 + Quasar com:
+Os Milestones 1 e 2 estão concluídos e entregam uma interface Vue 3 + Quasar com:
 
 - formulário de perfil, experiência e histórias brutas;
 - entrada de URL e descrição de vaga;
 - dashboard demonstrativo com termômetro, radar e gaps usando fixture local;
 - persistência de rascunhos no IndexedDB do navegador;
+- importação local de PDF com extração de texto revisável, sem upload;
+- normalização local do texto da vaga e prévia do pacote de contexto;
 - um shell de bridge local em Node.js para futuras integrações de IA.
 
-Parsing de PDF, leitura de URL, integração com CLIs/LLMs, BYOK e geração de CV ainda não foram implementados. Consulte o [roadmap interno](docs/private/roadmap.md) apenas no checkout local; ele é intencionalmente ignorado pelo Git.
+Leitura de URL, integração com CLIs/LLMs, BYOK e geração de CV ainda não foram implementados. PDFs escaneados sem texto selecionável exigem correção manual nesta etapa. Consulte o [roadmap interno](docs/private/roadmap.md) apenas no checkout local; ele é intencionalmente ignorado pelo Git.
 
 ### Privacidade
 
@@ -66,15 +68,17 @@ The project favors clarity and integrity: a skill is represented as experience o
 
 ### Current status
 
-Milestone 1 is complete and provides a Vue 3 + Quasar interface with:
+Milestones 1 and 2 are complete and provide a Vue 3 + Quasar interface with:
 
 - forms for profile, work experience, and raw stories;
 - URL and pasted job-description inputs;
 - a fixture-powered compatibility dashboard with a temperature indicator, radar, and gaps;
 - browser-local draft persistence through IndexedDB;
+- local PDF import with reviewable text extraction and no upload;
+- local job-text normalization and a context-package preview;
 - a local Node.js bridge shell for upcoming AI integrations.
 
-PDF parsing, URL extraction, CLI/LLM integrations, BYOK, and CV generation are not implemented yet. The internal roadmap is intentionally Git-ignored and remains available only in a local checkout.
+URL extraction, CLI/LLM integrations, BYOK, and CV generation are not implemented yet. Scanned PDFs without selectable text need manual correction at this stage. The internal roadmap is intentionally Git-ignored and remains available only in a local checkout.
 
 ### Privacy
 
