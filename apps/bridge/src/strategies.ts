@@ -1,18 +1,52 @@
 import { spawn } from "node:child_process";
 import type { BridgeRequest, BridgeResponse, ProviderStrategy } from "./types.js";
+import { buildPrompt } from "./prompts.js";
 
 const timeoutMs = 90_000;
 
 function payload(request: BridgeRequest) {
-  return JSON.stringify({ task: request.task, context: request.context });
+  return buildPrompt(request);
 }
 
 export class FakeStrategy implements ProviderStrategy {
   readonly id = "fake";
 
   async execute(request: BridgeRequest): Promise<BridgeResponse> {
-    return { provider: this.id, simulated: true, output: `Local fake response for ${request.task}. No provider received your context.` };
+    return { provider: this.id, simulated: true, output: JSON.stringify(request.task === "evaluate" ? fakeEvaluation(request) : fakeDocuments(request)) };
   }
+}
+
+function profile(request: BridgeRequest) {
+  const context = request.context.profile as Record<string, unknown> | undefined;
+  return {
+    name: String(context?.name || "Candidate"),
+    headline: String(context?.headline || "Professional"),
+    skills: String(context?.skills || "Competências confirmadas"),
+    evidence: String(context?.confirmedEvidence || "Evidências confirmadas pelo usuário")
+  };
+}
+
+function fakeEvaluation(request: BridgeRequest) {
+  const candidate = profile(request);
+  const evidence = candidate.evidence.slice(0, 180);
+  return {
+    score: 74,
+    classification: "Suitable" as const,
+    summary: "Aderência demonstrativa baseada apenas nas evidências confirmadas do perfil. Revise o resultado antes de gerar documentos.",
+    radar: [
+      { label: "Técnico", candidate: 78, role: 82 }, { label: "Produto", candidate: 72, role: 68 }, { label: "Entrega", candidate: 76, role: 74 }, { label: "Liderança", candidate: 55, role: 62 }, { label: "Domínio", candidate: 60, role: 70 }
+    ],
+    strengths: [{ title: "Evidência confirmada", evidence }],
+    gaps: [{ title: "Requisitos a confirmar", detail: "A estratégia fake não infere requisitos; confira cada obrigatoriedade da vaga antes do envio.", level: "Confirmar" as const }]
+  };
+}
+
+function fakeDocuments(request: BridgeRequest) {
+  const candidate = profile(request);
+  const english = request.options?.language === "en-US";
+  const cv = [candidate.name, candidate.headline, "", english ? "CONFIRMED SKILLS" : "COMPETÊNCIAS CONFIRMADAS", candidate.skills, "", english ? "CONFIRMED EVIDENCE" : "EVIDÊNCIAS CONFIRMADAS", candidate.evidence].join("\n");
+  const coverLetter = [english ? "Dear Hiring Team," : "Prezada equipe de recrutamento,", "", english ? `I am applying for this opportunity based on my confirmed background: ${candidate.evidence}` : `Tenho interesse nesta oportunidade com base no meu histórico confirmado: ${candidate.evidence}`, "", english ? "Sincerely," : "Atenciosamente,", candidate.name].join("\n");
+  return { cv: { filename: english ? "tailored-resume.txt" : "cv-direcionado.txt", content: cv }, ...(request.options?.coverLetter ? { coverLetter: { filename: english ? "cover-letter.txt" : "carta-de-apresentacao.txt", content: coverLetter } } : {}) };
 }
 
 export class CliStrategy implements ProviderStrategy {

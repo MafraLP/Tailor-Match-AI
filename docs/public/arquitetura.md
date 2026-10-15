@@ -15,11 +15,11 @@ O fluxo principal será simples:
 3. O produto exibe um painel de compatibilidade antes de qualquer geração.
 4. O candidato escolhe idioma e instruções adicionais para gerar o CV e, opcionalmente, a cover letter.
 
-O painel não se resume a uma nota. Ele usará um indicador de temperatura para comunicar o nível geral de aderência, um radar para comparar requisitos da vaga e competências com evidência no perfil, e uma área de gaps com a razão de cada ponto. Assim, a pessoa entende onde é competitiva e onde precisa de cautela.
+O painel não se resume a uma nota. Ele usa um indicador de temperatura para comunicar o nível geral de aderência, um radar para comparar requisitos da vaga e competências com evidência no perfil, e uma área de gaps com a razão de cada ponto. Assim, a pessoa entende onde é competitiva e onde precisa de cautela.
 
 ## Avaliação com evidência, não com contagem de palavras
 
-O motor de match seguirá uma avaliação estruturada: senioridade e escopo da função, responsabilidades, tecnologias exigidas versus tecnologias comprovadas, contexto de produto, requisitos obrigatórios, idioma, localização e modelo de trabalho. A saída será `Suitable`, `Borderline` ou `Not suitable`, acompanhada de pontos fortes, bloqueadores e lacunas materiais.
+O motor de match usa uma avaliação estruturada: senioridade e escopo da função, responsabilidades, tecnologias exigidas versus tecnologias comprovadas, contexto de produto, requisitos obrigatórios, idioma, localização e modelo de trabalho. A saída é `Suitable`, `Borderline` ou `Not suitable`, acompanhada de pontos fortes, bloqueadores e lacunas materiais. `Borderline` exige confirmação explícita antes da geração; `Not suitable` bloqueia a geração.
 
 O sistema diferencia três tipos de informação:
 
@@ -51,9 +51,9 @@ Isso traz três benefícios práticos:
 
 ## Prompt engineering versionado
 
-Os prompts serão arquivos versionados e parametrizáveis, não textos soltos dentro da interface. Cada fluxo — extração, normalização da vaga, avaliação, CV e cover letter — terá um template com variáveis explícitas, versão e contrato de saída.
+Os prompts são templates versionados e parametrizáveis, não textos soltos dentro da interface. Os fluxos de avaliação e geração têm versão explícita e contrato JSON validado pela bridge antes de a UI receber o resultado.
 
-Essa escolha dá rastreabilidade ao resultado e permite evoluir instruções sem alterar a lógica de apresentação. Também preserva as regras centrais: não inventar fatos, usar a linguagem da vaga quando apropriado, priorizar conteúdo relevante e manter o currículo legível por ATS.
+Essa escolha dá rastreabilidade ao resultado e permite evoluir instruções sem alterar a lógica de apresentação. Também preserva as regras centrais: não inventar fatos, usar a linguagem escolhida, priorizar conteúdo relevante e manter o currículo legível por ATS. A exportação inicial é texto simples selecionável (`.txt`), intencionalmente fácil de revisar e compatível com parsers ATS.
 
 ## Limites intencionais da primeira versão
 

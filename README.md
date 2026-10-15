@@ -10,17 +10,19 @@ O projeto prioriza clareza e integridade: uma competência só é apresentada co
 
 ### Estado atual
 
-Os Milestones 1, 2 e 3 estão concluídos e entregam uma interface Vue 3 + Quasar com:
+Os Milestones 1, 2, 3 e 4 estão concluídos e entregam uma interface Vue 3 + Quasar com:
 
 - formulário de perfil, experiência e histórias brutas;
 - entrada de URL e descrição de vaga;
-- dashboard demonstrativo com termômetro, radar e gaps usando fixture local;
+- dashboard de compatibilidade alimentado por avaliação estruturada, com termômetro, radar, gaps e evidências;
 - persistência de rascunhos no IndexedDB do navegador;
 - importação local de PDF com extração de texto revisável, sem upload;
 - normalização local do texto da vaga e prévia do pacote de contexto;
 - bridge local em Node.js/TypeScript com estratégias fake, CLI e BYOK.
+- templates de prompt versionados, com contrato JSON validado para avaliação e geração;
+- geração de CV ATS em texto simples selecionável, cover letter opcional, seleção de idioma e download local.
 
-Leitura de URL e geração de CV ainda não foram implementadas. A bridge exige execução local; Codex/Claude devem estar instalados e autenticados quando selecionados. PDFs escaneados sem texto selecionável exigem correção manual nesta etapa. Consulte o [roadmap interno](docs/private/roadmap.md) apenas no checkout local; ele é intencionalmente ignorado pelo Git.
+Leitura de URL ainda não foi implementada. A bridge exige execução local; Codex/Claude devem estar instalados e autenticados quando selecionados. PDFs escaneados sem texto selecionável exigem correção manual nesta etapa. Consulte o [roadmap interno](docs/private/roadmap.md) apenas no checkout local; ele é intencionalmente ignorado pelo Git.
 
 ### Privacidade
 
@@ -74,17 +76,19 @@ The project favors clarity and integrity: a skill is represented as experience o
 
 ### Current status
 
-Milestones 1, 2, and 3 are complete and provide a Vue 3 + Quasar interface with:
+Milestones 1, 2, 3, and 4 are complete and provide a Vue 3 + Quasar interface with:
 
 - forms for profile, work experience, and raw stories;
 - URL and pasted job-description inputs;
-- a fixture-powered compatibility dashboard with a temperature indicator, radar, and gaps;
+- a structured compatibility dashboard with a temperature indicator, radar, gaps, and evidence;
 - browser-local draft persistence through IndexedDB;
 - local PDF import with reviewable text extraction and no upload;
 - local job-text normalization and a context-package preview;
 - a local Node.js/TypeScript bridge with fake, CLI, and BYOK strategies.
+- versioned prompt templates and validated JSON contracts for evaluation and generation;
+- ATS-friendly selectable plain-text CV generation, optional cover letter, language selection, and local download.
 
-URL extraction and CV generation are not implemented yet. The bridge must run locally, and Codex/Claude must be installed and authenticated when selected. Scanned PDFs without selectable text need manual correction at this stage. The internal roadmap is intentionally Git-ignored and remains available only in a local checkout.
+URL extraction is not implemented yet. The bridge must run locally, and Codex/Claude must be installed and authenticated when selected. Scanned PDFs without selectable text need manual correction at this stage. The internal roadmap is intentionally Git-ignored and remains available only in a local checkout.
 
 ### Privacy
 
