@@ -1,0 +1,19 @@
+{
+  "name": "@tailor-match/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@quasar/extras": "^1.16.17",
+    "quasar": "^2.18.1",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "sass-embedded": "^1.100.0",
+    "vite": "^6.0.5"
+  }
+}

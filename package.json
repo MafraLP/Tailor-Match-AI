@@ -1,0 +1,9 @@
+{
+  "name": "tailor-match-ai",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "npm run dev --workspace @tailor-match/web",
+    "build": "npm run build --workspace @tailor-match/web"
+  }
+}
