@@ -4,233 +4,53 @@ import { loadDraft, saveDraft } from "./lib/profileStore";
 import { demoMatch } from "./fixtures/match";
 import { buildContextPackage, normalizeWhitespace, validationMessage } from "./lib/contextPackage";
 
-const activeStep = ref(1);
-const saved = ref(false);
-const saving = ref(false);
-const profile = reactive({
-  name: "",
-  headline: "",
-  location: "",
-  languages: "",
-  skills: "",
-  experience: "",
-  confirmedEvidence: "",
-  stories: ""
-});
-const job = reactive({ url: "", description: "", normalizedDescription: "" });
-const pdfStatus = ref("");
-const pdfError = ref("");
-const extractingPdf = ref(false);
-const formError = ref("");
+const activeStep = ref(1), saved = ref(false), saving = ref(false), pdfStatus = ref(""), pdfError = ref(""), extractingPdf = ref(false), formError = ref("");
+const profile = reactive({ name:"", headline:"", location:"", languages:"", skills:"", experience:"", confirmedEvidence:"", stories:"" });
+const job = reactive({ url:"", description:"", normalizedDescription:"" });
+const bridgeProvider = ref("fake"), bridgeCli = ref("codex"), bridgeEndpoint = ref(""), bridgeModel = ref(""), bridgeApiKey = ref(""), bridgeStatus = ref("Bridge local não conectada."), bridgeRunning = ref(false);
+const steps = [{id:1,title:"Perfil",note:"Evidências reais"},{id:2,title:"Vaga",note:"Contexto e requisitos"},{id:3,title:"Match",note:"Leitura da aderência"},{id:4,title:"Gerar",note:"Próxima etapa"}];
 const contextPackage = computed(() => buildContextPackage(profile, job));
-const bridgeProvider = ref("fake");
-const bridgeCli = ref("codex");
-const bridgeEndpoint = ref("");
-const bridgeModel = ref("");
-const bridgeApiKey = ref("");
-const bridgeStatus = ref("Bridge local não conectada.");
-const bridgeRunning = ref(false);
+const matchLabel = computed(() => demoMatch.score >= 75 ? "Alta aderência" : "Aderência parcial");
+const radarPoints = (field) => demoMatch.radar.map((item, i) => { const a=(Math.PI*2*i)/demoMatch.radar.length-Math.PI/2,r=item[field]*.78; return String(100+Math.cos(a)*r)+","+String(100+Math.sin(a)*r); }).join(" ");
+const axisPoint = (i) => { const a=(Math.PI*2*i)/demoMatch.radar.length-Math.PI/2; return {x:100+Math.cos(a)*86,y:100+Math.sin(a)*86}; };
 
-const temperature = computed(() => demoMatch.score >= 75 ? "🔥" : demoMatch.score >= 55 ? "🌤️" : "🧊");
-const radarPoints = (field) => demoMatch.radar.map((item, index) => {
-  const angle = (Math.PI * 2 * index) / demoMatch.radar.length - Math.PI / 2;
-  const radius = item[field] * 0.78;
-  return `${100 + Math.cos(angle) * radius},${100 + Math.sin(angle) * radius}`;
-}).join(" ");
-const axisPoint = (index) => {
-  const angle = (Math.PI * 2 * index) / demoMatch.radar.length - Math.PI / 2;
-  return { x: 100 + Math.cos(angle) * 86, y: 100 + Math.sin(angle) * 86 };
-};
-
-async function persist() {
-  saving.value = true;
-  saved.value = false;
-  try {
-    await saveDraft({ profile: JSON.parse(JSON.stringify(profile)), job: JSON.parse(JSON.stringify(job)) });
-    saved.value = true;
-  } finally {
-    saving.value = false;
-  }
-}
-
-async function continueTo(step) {
-  formError.value = validationMessage(profile, job);
-  if (step >= 3 && formError.value) return;
-  await persist();
-  activeStep.value = step;
-}
-
-async function importPdf(file) {
-  if (!file) return;
-  pdfError.value = "";
-  pdfStatus.value = "";
-  extractingPdf.value = true;
-  try {
-    const { extractPdfText } = await import("./lib/pdfText");
-    const result = await extractPdfText(file);
-    profile.confirmedEvidence = result.text;
-    pdfStatus.value = `${file.name} processado localmente · ${result.pages} página${result.pages === 1 ? "" : "s"}. Revise o texto antes de continuar.`;
-    await persist();
-  } catch (error) {
-    pdfError.value = error.message;
-  } finally {
-    extractingPdf.value = false;
-  }
-}
-
-function normalizeJob() {
-  job.normalizedDescription = normalizeWhitespace(job.description);
-}
-
-async function executeBridge() {
-  formError.value = validationMessage(profile, job);
-  if (formError.value) return;
-  bridgeRunning.value = true;
-  bridgeStatus.value = "Enviando o pacote revisado para a bridge local…";
-  const provider = bridgeProvider.value === "fake"
-    ? { kind: "fake" }
-    : bridgeProvider.value === "cli"
-      ? { kind: "cli", cli: bridgeCli.value }
-      : { kind: "byok", endpoint: bridgeEndpoint.value, model: bridgeModel.value, apiKey: bridgeApiKey.value };
-  try {
-    const response = await fetch("http://127.0.0.1:4317/v1/execute", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ task: "evaluate", context: contextPackage.value, provider })
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error ?? "A bridge recusou a solicitação.");
-    bridgeStatus.value = result.simulated ? "Bridge fake respondeu localmente. Nenhum provedor recebeu seus dados." : `Bridge respondeu via ${result.provider}.`;
-  } catch (error) {
-    bridgeStatus.value = `Não foi possível alcançar a bridge local: ${error.message}`;
-  } finally {
-    bridgeRunning.value = false;
-  }
-}
-
-onMounted(async () => {
-  const draft = await loadDraft();
-  if (draft?.profile) {
-    Object.assign(profile, draft.profile);
-    if (!profile.confirmedEvidence && profile.experience) profile.confirmedEvidence = profile.experience;
-  }
-  if (draft?.job) Object.assign(job, draft.job);
-});
+async function persist(){saving.value=true;saved.value=false;try{await saveDraft({profile:JSON.parse(JSON.stringify(profile)),job:JSON.parse(JSON.stringify(job))});saved.value=true}finally{saving.value=false}}
+async function continueTo(step){formError.value=validationMessage(profile,job);if(step>=3&&formError.value)return;await persist();activeStep.value=step}
+async function importPdf(file){if(!file)return;pdfError.value="";pdfStatus.value="";extractingPdf.value=true;try{const {extractPdfText}=await import("./lib/pdfText");const result=await extractPdfText(file);profile.confirmedEvidence=result.text;pdfStatus.value=file.name+" processado localmente · "+result.pages+" página"+(result.pages===1?"":"s")+". Revise o texto antes de continuar.";await persist()}catch(error){pdfError.value=error.message}finally{extractingPdf.value=false}}
+function normalizeJob(){job.normalizedDescription=normalizeWhitespace(job.description)}
+async function executeBridge(){formError.value=validationMessage(profile,job);if(formError.value)return;bridgeRunning.value=true;bridgeStatus.value="Enviando o pacote revisado para a bridge local…";const provider=bridgeProvider.value==="fake"?{kind:"fake"}:bridgeProvider.value==="cli"?{kind:"cli",cli:bridgeCli.value}:{kind:"byok",endpoint:bridgeEndpoint.value,model:bridgeModel.value,apiKey:bridgeApiKey.value};try{const response=await fetch("http://127.0.0.1:4317/v1/execute",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:"evaluate",context:contextPackage.value,provider})});const result=await response.json();if(!response.ok)throw new Error(result.error??"A bridge recusou a solicitação.");bridgeStatus.value=result.simulated?"Bridge fake respondeu localmente. Nenhum provedor recebeu seus dados.":"Bridge respondeu via "+result.provider+"."}catch(error){bridgeStatus.value="Não foi possível alcançar a bridge local: "+error.message}finally{bridgeRunning.value=false}}
+onMounted(async()=>{const draft=await loadDraft();if(draft?.profile){Object.assign(profile,draft.profile);if(!profile.confirmedEvidence&&profile.experience)profile.confirmedEvidence=profile.experience}if(draft?.job)Object.assign(job,draft.job)});
 </script>
 
 <template>
-  <q-layout view="hHh Lpr fFf" class="app-shell">
-    <q-header class="topbar">
-      <q-toolbar class="toolbar">
-        <div class="brand-mark">T</div>
-        <q-toolbar-title>
-          <strong>Tailor Match</strong><span class="ai-label">AI</span>
-          <div class="tagline">Match honesto, candidatura melhor.</div>
-        </q-toolbar-title>
-        <q-chip square class="local-chip" icon="lock">Dados locais</q-chip>
-      </q-toolbar>
-    </q-header>
-
-    <q-page-container>
-      <q-page class="page-wrap">
-        <section class="hero">
-          <p class="eyebrow">MILSTONE 2 · CONTEXTO LOCAL</p>
-          <h1>Transforme sua trajetória em <span>evidência.</span></h1>
-          <p class="hero-copy">Organize seu contexto, compare com uma vaga e enxergue onde você já é forte — antes de enviar qualquer dado para uma IA.</p>
-        </section>
-
-        <section class="privacy-banner" aria-label="Privacidade">
-          <q-icon name="verified_user" size="22px" />
-          <div><strong>Nada foi enviado.</strong> Este protótipo salva seu perfil e a vaga somente no IndexedDB deste navegador.</div>
-          <q-badge outline color="positive">LOCAL-FIRST</q-badge>
-        </section>
-
-        <q-stepper v-model="activeStep" flat animated color="primary" class="workflow" header-nav>
-          <q-step :name="1" title="Seu perfil" icon="person" :done="activeStep > 1">
-            <div class="section-heading"><div><p class="eyebrow">01 · CONTEXTO</p><h2>Traga evidências, depois complemente a história.</h2><p>O texto extraído de um PDF e as experiências preenchidas manualmente são revisáveis. Histórias brutas ficam separadas.</p></div><q-btn flat color="primary" icon="save" :label="saving ? 'Salvando...' : saved ? 'Salvo localmente' : 'Salvar rascunho'" @click="persist" /></div>
-            <div class="pdf-import">
-              <div><p class="card-kicker">IMPORTAR CURRÍCULO</p><strong>Extrair texto do PDF neste navegador</strong><p>O arquivo não é enviado nem mantido após a extração. PDFs com texto selecionável, até 10 MB.</p></div>
-              <q-file outlined accept="application/pdf,.pdf" label="Selecionar PDF" :loading="extractingPdf" @update:model-value="importPdf">
-                <template #prepend><q-icon name="upload_file" /></template>
-              </q-file>
-            </div>
-            <q-banner v-if="pdfStatus" rounded class="success-banner"><template #avatar><q-icon name="check_circle" color="positive" /></template>{{ pdfStatus }}</q-banner>
-            <q-banner v-if="pdfError" rounded class="error-banner"><template #avatar><q-icon name="error" color="negative" /></template>{{ pdfError }}</q-banner>
-            <div class="form-grid">
-              <q-input v-model="profile.name" outlined label="Nome" placeholder="Como quer aparecer no CV" />
-              <q-input v-model="profile.headline" outlined label="Título profissional" placeholder="Ex.: Desenvolvedor Full-stack" />
-              <q-input v-model="profile.location" outlined label="Localização / modelo de trabalho" placeholder="Ex.: São Paulo · remoto" />
-              <q-input v-model="profile.languages" outlined label="Idiomas" placeholder="Ex.: Português nativo, inglês B2" />
-              <q-input v-model="profile.skills" outlined class="span-2" label="Tecnologias e competências comprovadas" placeholder="Ex.: Vue, Laravel, PostgreSQL, APIs REST" hint="Use vírgulas para separar." />
-              <q-input v-model="profile.confirmedEvidence" outlined type="textarea" autogrow class="span-2" label="Evidências confirmadas" placeholder="Empresa, cargo, período, responsabilidades, tecnologias e resultados comprováveis." hint="Revise o texto extraído antes de usá-lo como evidência." />
-              <q-input v-model="profile.stories" outlined type="textarea" autogrow class="span-2 raw-context" label="Histórias brutas e anedotas" placeholder="Ex.: Na faculdade fiz um mini projeto que resolveu…" hint="Não será tratado como fato no CV sem sua revisão." />
-            </div>
-            <div class="step-actions"><q-btn unelevated color="primary" label="Continuar para a vaga" icon-right="arrow_forward" @click="continueTo(2)" /></div>
-          </q-step>
-
-          <q-step :name="2" title="A vaga" icon="work_outline" :done="activeStep > 2">
-            <div class="section-heading"><div><p class="eyebrow">02 · ALVO</p><h2>Traga o contexto da oportunidade.</h2><p>A URL fica registrada localmente como referência. Nesta etapa, o texto colado é a fonte confiável para análise.</p></div><q-btn flat color="primary" icon="save" label="Salvar rascunho" @click="persist" /></div>
-            <div class="form-grid job-form">
-              <q-input v-model="job.url" outlined class="span-2" label="URL da vaga (opcional)" placeholder="https://empresa.com/carreiras/vaga" type="url" />
-              <q-input v-model="job.description" outlined type="textarea" autogrow class="span-2" label="Descrição da vaga" placeholder="Cole a descrição completa: responsabilidades, requisitos obrigatórios, diferenciais, idioma e localização." @blur="normalizeJob" />
-            </div>
-            <div class="job-tools"><q-btn outline color="primary" icon="cleaning_services" label="Normalizar texto" @click="normalizeJob" /><span>Remove espaçamento excessivo sem mudar o conteúdo.</span></div>
-            <q-expansion-item group="review" icon="visibility" label="Revisar pacote preparado para avaliação" header-class="context-review">
-              <div class="context-copy">Este é o único contexto que uma futura integração poderá receber após sua ação explícita. Nada é enviado agora.</div>
-              <pre class="context-preview">{{ JSON.stringify(contextPackage, null, 2) }}</pre>
-            </q-expansion-item>
-            <q-card flat bordered class="bridge-card">
-              <q-card-section><div class="card-title"><div><p class="card-kicker">BRIDGE LOCAL · MILESTONE 3</p><h3>Escolha onde executar a avaliação.</h3></div><q-badge outline color="primary">CONFIGURAÇÃO NÃO PERSISTIDA</q-badge></div>
-                <q-select v-model="bridgeProvider" outlined emit-value map-options label="Modo de integração" :options="[{ label: 'Fake local (teste sem IA)', value: 'fake' }, { label: 'CLI instalada na máquina', value: 'cli' }, { label: 'API com sua própria chave (BYOK)', value: 'byok' }]" />
-                <q-select v-if="bridgeProvider === 'cli'" v-model="bridgeCli" outlined emit-value map-options class="q-mt-md" label="CLI" :options="[{ label: 'Codex CLI', value: 'codex' }, { label: 'Claude CLI', value: 'claude' }]" />
-                <div v-if="bridgeProvider === 'byok'" class="bridge-fields q-mt-md"><q-input v-model="bridgeEndpoint" outlined label="Endpoint HTTPS" placeholder="https://provider.example/v1/responses" /><q-input v-model="bridgeModel" outlined label="Modelo" placeholder="Nome do modelo" /><q-input v-model="bridgeApiKey" outlined type="password" label="Chave de API" placeholder="Mantida apenas em memória" /></div>
-                <p class="bridge-status"><q-icon name="memory" /> {{ bridgeStatus }}</p>
-                <q-btn unelevated color="primary" class="q-mt-sm" :loading="bridgeRunning" label="Executar avaliação pela bridge" icon="hub" @click="executeBridge" />
-              </q-card-section>
-            </q-card>
-            <q-banner v-if="formError" rounded class="error-banner"><template #avatar><q-icon name="error" color="negative" /></template>{{ formError }}</q-banner>
-            <div class="demo-note"><q-icon name="science" /><div><strong>Dashboard demonstrativo.</strong> O resultado da próxima etapa usa uma fixture local, sem avaliar nem enviar este conteúdo.</div></div>
-            <div class="step-actions"><q-btn flat label="Voltar" @click="activeStep = 1" /><q-btn unelevated color="primary" label="Ver compatibilidade" icon-right="insights" @click="continueTo(3)" /></div>
-          </q-step>
-
-          <q-step :name="3" title="Compatibilidade" icon="insights" :done="activeStep > 3">
-            <div class="match-intro"><div><p class="eyebrow">03 · LEITURA DE MATCH</p><h2>Compatibilidade com contexto.</h2><p>Resultado demonstrativo para validar a experiência visual do produto.</p></div><q-badge color="positive" class="fixture-badge">FIXTURE LOCAL</q-badge></div>
-            <div class="score-layout">
-              <q-card flat bordered class="score-card"><q-card-section><p class="card-kicker">ADERÊNCIA GERAL</p><div class="score-number">{{ demoMatch.score }}<small>/100</small></div><div class="temperature">{{ temperature }}</div><q-linear-progress rounded size="10px" :value="demoMatch.score / 100" color="primary" track-color="blue-grey-1" class="q-mt-md" /><q-chip color="positive" text-color="white" class="q-mt-md">{{ demoMatch.classification }}</q-chip></q-card-section></q-card>
-              <q-card flat bordered class="summary-card"><q-card-section><p class="card-kicker">LEITURA</p><h3>Pronto para aprofundar.</h3><p>{{ demoMatch.summary }}</p><div class="strength-list"><span v-for="strength in demoMatch.strengths" :key="strength"><q-icon name="check_circle" color="positive" />{{ strength }}</span></div></q-card-section></q-card>
-            </div>
-            <div class="insight-grid">
-              <q-card flat bordered class="radar-card"><q-card-section><div class="card-title"><div><p class="card-kicker">MAPA DE COMPETÊNCIAS</p><h3>Você × vaga</h3></div><div class="legend"><span><i class="candidate"></i>Você</span><span><i class="role"></i>Vaga</span></div></div><svg viewBox="0 0 200 200" role="img" aria-label="Radar comparando perfil e vaga"><polygon points="100,14 182,73 151,166 49,166 18,73" class="radar-grid" /><polygon :points="radarPoints('role')" class="role-shape" /><polygon :points="radarPoints('candidate')" class="candidate-shape" /><g v-for="(item, index) in demoMatch.radar" :key="item.label"><line x1="100" y1="100" :x2="axisPoint(index).x" :y2="axisPoint(index).y" class="axis" /><text :x="100 + (axisPoint(index).x - 100) * 1.14" :y="100 + (axisPoint(index).y - 100) * 1.14" text-anchor="middle" class="radar-label">{{ item.label }}</text></g></svg></q-card-section></q-card>
-              <q-card flat bordered class="gaps-card"><q-card-section><p class="card-kicker">GAPS A ENDEREÇAR</p><h3>O que merece atenção</h3><div v-for="gap in demoMatch.gaps" :key="gap.title" class="gap"><div class="gap-icon">!</div><div><strong>{{ gap.title }}</strong><p>{{ gap.detail }}</p><q-badge outline color="warning">{{ gap.level }}</q-badge></div></div></q-card-section></q-card>
-            </div>
-            <div class="step-actions"><q-btn flat label="Editar vaga" @click="activeStep = 2" /><q-btn unelevated color="primary" label="Preparar geração" icon-right="description" @click="activeStep = 4" /></div>
-          </q-step>
-
-          <q-step :name="4" title="Geração" icon="description">
-            <div class="section-heading"><div><p class="eyebrow">04 · PRÓXIMA ETAPA</p><h2>Geração ainda não está conectada.</h2><p>O shell visual está pronto; o Milestone 4 adicionará prompts versionados, provider bridge e exportação ATS.</p></div></div>
-            <div class="generation-grid"><q-select outlined disable label="Idioma de saída" model-value="Português (Brasil)" :options="['Português (Brasil)', 'English']" /><q-input outlined disable label="Instruções adicionais" placeholder="Ex.: focar mais em liderança" /><q-toggle disable label="Incluir cover letter quando aplicável" /></div>
-            <q-banner rounded class="generation-banner"><template #avatar><q-icon name="lock" color="primary" /></template>Os botões ficam bloqueados até a bridge e o motor de prompts serem implementados. Seus rascunhos continuam locais.</q-banner>
-            <div class="step-actions"><q-btn flat label="Voltar ao dashboard" @click="activeStep = 3" /><q-btn unelevated disable color="primary" label="Gerar CV" icon="download" /></div>
-          </q-step>
-        </q-stepper>
-      </q-page>
-    </q-page-container>
+  <q-layout class="app-shell"><a class="skip-link" href="#workspace">Pular para o conteúdo</a>
+    <q-header class="site-header"><q-toolbar class="header-inner"><div class="logo-mark">T</div><q-toolbar-title class="brand-name">Tailor Match <span>AI</span></q-toolbar-title><q-chip square icon="lock" class="privacy-chip">Dados ficam neste navegador</q-chip></q-toolbar></q-header>
+    <q-page-container><q-page id="workspace" class="workspace">
+      <header class="intro"><p class="eyebrow">CARREIRA COM EVIDÊNCIA</p><h1>Uma candidatura mais precisa começa pelo que é verdadeiro.</h1><p>Organize sua trajetória, compare-a com uma vaga e revise o contexto antes de qualquer envio.</p></header>
+      <div class="app-frame"><nav class="progress-nav" aria-label="Etapas da candidatura"><p class="nav-kicker">SEU FLUXO</p><button v-for="step in steps" :key="step.id" type="button" :class="['step-link',{active:activeStep===step.id,done:activeStep>step.id}]" @click="activeStep=step.id"><span>0{{ step.id }}</span><span><strong>{{ step.title }}</strong><small>{{ step.note }}</small></span></button><div class="nav-note"><q-icon name="verified_user"/> Seu perfil não vai para um servidor do Tailor Match.</div></nav>
+        <main class="task-panel">
+          <section v-if="activeStep===1" class="task-view"><div class="task-heading"><div><p class="eyebrow">ETAPA 01</p><h2>Seu perfil, sem exageros.</h2><p>Comece pelas evidências. Histórias e anedotas ficam à parte até você confirmá-las.</p></div><q-btn flat no-caps color="primary" icon="save" :label="saving?'Salvando…':saved?'Salvo localmente':'Salvar rascunho'" @click="persist"/></div>
+            <div class="upload-zone"><q-icon name="upload_file"/><div><strong>Importar currículo em PDF</strong><p>Extraímos somente o texto no seu navegador. PDF com texto selecionável, até 10 MB.</p></div><q-file outlined dense accept="application/pdf,.pdf" label="Selecionar PDF" :loading="extractingPdf" @update:model-value="importPdf"/></div>
+            <q-banner v-if="pdfStatus" rounded class="notice success" role="status">{{ pdfStatus }}</q-banner><q-banner v-if="pdfError" rounded class="notice error" role="alert">{{ pdfError }}</q-banner>
+            <div class="form-grid"><q-input v-model.trim="profile.name" outlined label="Nome" placeholder="Como quer aparecer no CV"/><q-input v-model.trim="profile.headline" outlined label="Título profissional" placeholder="Ex.: Desenvolvedor Full-stack"/><q-input v-model.trim="profile.location" outlined label="Localização / modelo de trabalho"/><q-input v-model.trim="profile.languages" outlined label="Idiomas"/><q-input v-model.trim="profile.skills" outlined class="span-2" label="Tecnologias e competências comprovadas" hint="Separe com vírgulas."/><q-input v-model="profile.confirmedEvidence" outlined type="textarea" autogrow class="span-2" label="Evidências confirmadas" hint="Revise o texto extraído antes de usar como evidência."/><q-input v-model="profile.stories" outlined type="textarea" autogrow class="span-2 context-field" label="Contexto bruto (opcional)" hint="Não será promovido automaticamente a fato no seu CV."/></div>
+            <div class="action-row"><span>Etapa 1 de 4</span><q-btn unelevated no-caps color="primary" label="Continuar" icon-right="arrow_forward" @click="continueTo(2)"/></div></section>
+          <section v-else-if="activeStep===2" class="task-view"><div class="task-heading"><div><p class="eyebrow">ETAPA 02</p><h2>A vaga é o seu alvo.</h2><p>Cole a descrição completa. A URL é referência local, mas o texto é a fonte confiável para a avaliação.</p></div><q-btn flat no-caps color="primary" icon="save" label="Salvar rascunho" @click="persist"/></div>
+            <div class="form-grid"><q-input v-model.trim="job.url" outlined class="span-2" label="URL da vaga (opcional)" type="url"/><q-input v-model="job.description" outlined type="textarea" autogrow class="span-2 job-description" label="Descrição da vaga" @blur="normalizeJob"/></div>
+            <div class="inline-tool"><div><strong>Texto mais legível, mesmo conteúdo.</strong><span>Remove apenas espaços e quebras excessivas.</span></div><q-btn outline no-caps color="primary" icon="cleaning_services" label="Normalizar" @click="normalizeJob"/></div>
+            <q-expansion-item group="review" icon="visibility" label="Revisar pacote preparado para avaliação" header-class="disclosure"><div class="disclosure-copy">Esse é o contexto que uma integração futura poderá receber após sua ação explícita.</div><pre class="context-preview">{{ JSON.stringify(contextPackage,null,2) }}</pre></q-expansion-item>
+            <q-expansion-item group="review" icon="hub" label="Configurar bridge local (avançado)" header-class="disclosure"><div class="bridge-content"><q-select v-model="bridgeProvider" outlined emit-value map-options label="Modo de integração" :options="[{label:'Fake local (teste sem IA)',value:'fake'},{label:'CLI instalada na máquina',value:'cli'},{label:'API com sua própria chave (BYOK)',value:'byok'}]"/><q-select v-if="bridgeProvider==='cli'" v-model="bridgeCli" outlined emit-value map-options class="q-mt-md" label="CLI" :options="[{label:'Codex CLI',value:'codex'},{label:'Claude CLI',value:'claude'}]"/><div v-if="bridgeProvider==='byok'" class="bridge-fields q-mt-md"><q-input v-model.trim="bridgeEndpoint" outlined label="Endpoint HTTPS"/><q-input v-model.trim="bridgeModel" outlined label="Modelo"/><q-input v-model="bridgeApiKey" outlined type="password" label="Chave de API"/></div><p class="bridge-status" aria-live="polite">{{ bridgeStatus }}</p><q-btn unelevated no-caps color="primary" :loading="bridgeRunning" label="Testar com a bridge" @click="executeBridge"/></div></q-expansion-item>
+            <q-banner v-if="formError" rounded class="notice error" role="alert">{{ formError }}</q-banner><div class="action-row"><q-btn flat no-caps label="Voltar" @click="activeStep=1"/><span>Etapa 2 de 4</span><q-btn unelevated no-caps color="primary" label="Ver compatibilidade" icon-right="arrow_forward" @click="continueTo(3)"/></div></section>
+          <section v-else-if="activeStep===3" class="task-view"><div class="task-heading"><div><p class="eyebrow">ETAPA 03 · DEMONSTRAÇÃO</p><h2>Onde você já se encaixa.</h2><p>Este resultado usa uma fixture local até o motor de avaliação entrar em produção.</p></div><q-badge outline color="primary">FIXTURE LOCAL</q-badge></div>
+            <div class="match-hero"><div class="score-block"><p>ADERÊNCIA GERAL</p><strong>{{ demoMatch.score }}<small>/100</small></strong><span>{{ matchLabel }}</span></div><div class="match-summary"><h3>{{ demoMatch.classification }}</h3><p>{{ demoMatch.summary }}</p><div class="strength-list"><span v-for="strength in demoMatch.strengths" :key="strength"><q-icon name="check_circle"/>{{ strength }}</span></div></div></div>
+            <div class="insight-grid"><q-card flat bordered><q-card-section><div class="card-title"><div><p class="eyebrow">MAPA DE COMPETÊNCIAS</p><h3>Você × vaga</h3></div><div class="legend"><span><i class="candidate"/>Você</span><span><i class="role"/>Vaga</span></div></div><svg viewBox="0 0 200 200" role="img" aria-label="Radar comparando perfil e vaga"><polygon points="100,14 182,73 151,166 49,166 18,73" class="radar-grid"/><polygon :points="radarPoints('role')" class="role-shape"/><polygon :points="radarPoints('candidate')" class="candidate-shape"/><g v-for="(item,index) in demoMatch.radar" :key="item.label"><line x1="100" y1="100" :x2="axisPoint(index).x" :y2="axisPoint(index).y" class="axis"/><text :x="100+(axisPoint(index).x-100)*1.14" :y="100+(axisPoint(index).y-100)*1.14" text-anchor="middle" class="radar-label">{{ item.label }}</text></g></svg></q-card-section></q-card><q-card flat bordered><q-card-section><p class="eyebrow">PONTOS DE ATENÇÃO</p><h3>O que vale endereçar</h3><div v-for="gap in demoMatch.gaps" :key="gap.title" class="gap"><q-icon name="priority_high"/><div><strong>{{ gap.title }}</strong><p>{{ gap.detail }}</p><q-badge outline color="warning">{{ gap.level }}</q-badge></div></div></q-card-section></q-card></div>
+            <div class="action-row"><q-btn flat no-caps label="Editar vaga" @click="activeStep=2"/><span>Etapa 3 de 4</span><q-btn unelevated no-caps color="primary" label="Preparar geração" icon-right="arrow_forward" @click="activeStep=4"/></div></section>
+          <section v-else class="task-view"><div class="task-heading"><div><p class="eyebrow">ETAPA 04</p><h2>Geração vem a seguir.</h2><p>O espaço está pronto para os prompts versionados e a exportação ATS do Milestone 4.</p></div></div><div class="coming-soon"><q-icon name="auto_awesome"/><div><strong>Seu contexto já está organizado.</strong><p>Na próxima etapa, você escolherá idioma, tom e se deseja uma cover letter.</p></div></div><div class="generation-grid"><q-select outlined disable label="Idioma de saída" model-value="Português (Brasil)" :options="['Português (Brasil)','English']"/><q-input outlined disable label="Instruções adicionais"/></div><div class="action-row"><q-btn flat no-caps label="Voltar ao match" @click="activeStep=3"/><span>Etapa 4 de 4</span><q-btn unelevated disable no-caps color="primary" label="Gerar CV"/></div></section>
+        </main></div>
+    </q-page></q-page-container>
   </q-layout>
 </template>
 
 <style>
-:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #e9edf8; background: #0b1220; }
-* { box-sizing: border-box; }
-body { margin: 0; background: #0b1220; }
-.app-shell { min-height: 100vh; background: radial-gradient(circle at 70% 0%, #1a2151 0, transparent 33rem), #0b1220; }
-.topbar { background: rgba(11,18,32,.82); backdrop-filter: blur(12px); border-bottom: 1px solid #26324c; }
-.toolbar { max-width: 1180px; min-height: 72px; margin: auto; padding: 0 20px; }
-.brand-mark { width: 34px; height: 34px; display: grid; place-items: center; margin-right: 10px; border-radius: 10px; color: #fff; font-weight: 800; background: linear-gradient(135deg,#8b7cff,#4d39da); }
-.ai-label { color: #8b7cff; margin-left: 5px; }.tagline { font-size: 12px; color: #9da9bf; margin-top: 1px; font-weight: 400; }
-.local-chip { background: #122b2a; color: #a9efe0; border: 1px solid #286b61; }
-.page-wrap { max-width: 1180px; margin: 0 auto; padding: 64px 20px 80px; }
-.hero { max-width: 760px; margin-bottom: 28px; }.eyebrow { color: #a99eff; font-weight: 750; letter-spacing: .12em; font-size: 11px; margin: 0 0 8px; }
-h1,h2,h3,p { margin-top: 0; } h1 { font-size: clamp(34px, 5vw, 58px); line-height: 1.06; letter-spacing: -.045em; margin-bottom: 18px; } h1 span { color: #8f83ff; } h2 { font-size: 29px; letter-spacing: -.03em; margin-bottom: 8px; } h3 { font-size: 19px; margin-bottom: 10px; }
-.hero-copy,.section-heading p,.match-intro p { color: #aeb8cc; line-height: 1.65; font-size: 16px; }.privacy-banner { display: flex; align-items: center; gap: 13px; padding: 14px 16px; background: #101b2d; border: 1px solid #29405b; border-radius: 12px; color: #bdd0e9; margin-bottom: 24px; }.privacy-banner .q-badge { margin-left: auto; }.workflow { border-radius: 16px; background: #f8f9fd; color: #1c2638; overflow: hidden; }.workflow .q-stepper__header { border-bottom: 1px solid #e2e7f0; }.workflow .q-stepper__tab { min-height: 82px; }.workflow .q-stepper__step-inner { padding: 34px; }.workflow .q-field--outlined .q-field__control:before { border-color: #ccd4e2; }.section-heading,.match-intro { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 26px; }.section-heading p,.match-intro p { color: #657187; font-size: 14px; margin-bottom: 0; }.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }.span-2 { grid-column: span 2; }.raw-context .q-field__control { background: #fbfaff; }.pdf-import { display:grid; grid-template-columns: 1.2fr .8fr; gap:20px; align-items:center; background:#f2f4fb; border:1px dashed #b8c2d6; border-radius:12px; padding:18px; margin-bottom:18px; }.pdf-import p:not(.card-kicker) { color:#657187; font-size:13px; margin:5px 0 0; line-height:1.45; }.success-banner,.error-banner { margin: 0 0 18px; }.success-banner { background:#ecfbf6; color:#176752; border:1px solid #b9eadb; }.error-banner { background:#fff0f1; color:#9d2735; border:1px solid #f3c5cb; }.job-tools { display:flex; align-items:center; gap:12px; margin-top:18px; color:#657187; font-size:13px; }.context-review { color:#382e80; font-weight:700; }.context-copy { color:#657187; font-size:13px; padding:0 18px 12px; }.context-preview { max-height:320px; overflow:auto; margin:0 18px 18px; padding:14px; background:#101827; color:#d8e2f5; border-radius:8px; white-space:pre-wrap; font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; }.bridge-card { margin-top:18px; border-color:#cfc9fc; }.bridge-fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }.bridge-status { display:flex; align-items:center; gap:6px; color:#657187; margin:16px 0 0; font-size:13px; }.step-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px; }.step-actions .q-btn:first-child { margin-right: auto; }.demo-note,.generation-banner { display: flex; gap: 10px; background: #f2f0ff; color: #403878; border: 1px solid #dcd6ff; border-radius: 10px; padding: 14px; margin-top: 20px; }.fixture-badge { align-self: center; }.score-layout,.insight-grid { display: grid; grid-template-columns: .72fr 1.28fr; gap: 18px; }.score-layout { margin-bottom: 18px; }.score-card,.summary-card,.radar-card,.gaps-card { border-color: #dce2ec; }.score-card { text-align: center; }.card-kicker { color: #78869b; font-size: 11px; font-weight: 750; letter-spacing: .1em; margin-bottom: 12px; }.score-number { font-size: 57px; line-height: 1; font-weight: 800; letter-spacing: -.06em; color: #262c63; }.score-number small { font-size: 18px; color: #8390a2; letter-spacing: 0; }.temperature { font-size: 30px; margin-top: 7px; }.summary-card p { color: #5f6a7e; line-height: 1.6; }.strength-list { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-top: 24px; }.strength-list span { display: flex; align-items: center; gap: 5px; font-size: 13px; }.card-title { display: flex; justify-content: space-between; }.legend { display: flex; gap: 12px; font-size: 11px; color: #647085; }.legend i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right: 4px; }.candidate { background:#6557ec; }.role { background:#2eb89c; }.radar-card svg { width: 100%; max-height: 300px; margin-top: 8px; overflow: visible; }.radar-grid { fill: #f7f8fc; stroke: #d7deeb; }.axis { stroke: #d7deeb; }.candidate-shape { fill: rgba(101,87,236,.24); stroke: #6557ec; stroke-width: 2; }.role-shape { fill: rgba(46,184,156,.18); stroke: #2eb89c; stroke-width: 2; }.radar-label { font-size: 8px; fill:#5f6b7f; }.gap { display: flex; gap: 12px; padding: 16px 0; border-bottom: 1px solid #edf0f5; }.gap:last-child { border-bottom: 0; }.gap-icon { flex: 0 0 25px; height: 25px; border-radius: 50%; display:grid; place-items:center; color: #966900; background:#fff2ce; font-weight:800; }.gap p { color: #657187; line-height: 1.48; font-size: 13px; margin: 5px 0 8px; }.generation-grid { display:grid; gap:18px; grid-template-columns: repeat(2,minmax(0,1fr)); }.generation-grid .q-toggle { grid-column:span 2; }.generation-banner { margin-top: 22px; }
-@media (max-width: 700px) { .page-wrap { padding: 38px 14px 50px; }.local-chip { display:none; }.workflow .q-stepper__step-inner { padding: 24px 16px; }.section-heading,.match-intro { display:block; }.section-heading .q-btn { margin-top: 8px; }.form-grid,.score-layout,.insight-grid,.generation-grid,.pdf-import,.bridge-fields { grid-template-columns: 1fr; }.span-2,.generation-grid .q-toggle { grid-column: auto; }.privacy-banner .q-badge { display:none; }.workflow .q-stepper__tab { padding: 8px; }.workflow .q-stepper__label { font-size: 11px; }.step-actions { flex-wrap: wrap; }.step-actions .q-btn:first-child { margin-right: 0; }.card-title { display:block; }.legend { margin-top: 8px; }.job-tools { align-items:flex-start; flex-direction:column; } }
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+:root{--ink:#1e1b4b;--muted:#64748b;--canvas:#faf5ff;--surface:#fff;--line:#ddd6fe;--primary:#7c3aed;--accent:#0891b2;font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:var(--canvas)}*{box-sizing:border-box}body{margin:0;background:var(--canvas)}.app-shell{min-height:100dvh;background:linear-gradient(135deg,#faf5ff,#fff 48%,#f1fbfc)}.skip-link{position:fixed;top:-60px;left:16px;z-index:30;padding:10px;background:#1e1b4b;color:#fff}.skip-link:focus{top:16px}.site-header{background:rgba(250,245,255,.94);color:var(--ink);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}.header-inner{max-width:1180px;min-height:68px;margin:auto;padding:0 24px}.logo-mark{display:grid;place-items:center;width:32px;height:32px;margin-right:10px;border-radius:8px;background:var(--ink);color:#fff;font-family:'Space Grotesk';font-weight:700}.brand-name,h1,h2,h3,strong{font-family:'Space Grotesk',sans-serif}.brand-name span,.eyebrow{color:var(--primary)}.privacy-chip{border:1px solid #cbd5e1;background:transparent;color:#475569}.workspace{max-width:1180px;margin:auto;padding:72px 24px 96px}.intro{max-width:700px;margin:0 auto 48px;text-align:center}.eyebrow,.nav-kicker{margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.12em}.intro h1{margin:0;font-size:clamp(36px,5vw,58px);line-height:1.06;letter-spacing:-.055em;text-wrap:balance}.intro>p:last-child{max-width:60ch;margin:20px auto 0;color:var(--muted);font-size:17px;line-height:1.65}.app-frame{display:grid;grid-template-columns:240px minmax(0,1fr);gap:48px}.progress-nav{position:sticky;top:92px;height:max-content;padding-top:16px}.step-link{display:flex;width:100%;gap:14px;padding:14px 12px;border:0;border-left:2px solid transparent;background:transparent;color:#64748b;text-align:left;cursor:pointer;transition:.2s}.step-link:hover,.step-link.active{background:#f3efff;color:var(--ink)}.step-link.active{border-left-color:var(--primary)}.step-link.done>span:first-child{color:#047857}.step-link>span:first-child{font:700 12px 'Space Grotesk';color:#94a3b8}.step-link strong,.step-link small{display:block}.step-link small{margin-top:3px;font-size:12px}.nav-note{margin:30px 12px 0;padding-top:18px;border-top:1px solid var(--line);color:#64748b;font-size:12px;line-height:1.55}.task-view{padding:40px;border:1px solid var(--line);background:var(--surface);box-shadow:0 18px 42px rgba(76,29,149,.07)}.task-heading{display:flex;justify-content:space-between;gap:20px;margin-bottom:32px}.task-heading h2{margin:0;font-size:30px;letter-spacing:-.04em}.task-heading p:last-child{max-width:62ch;margin:10px 0 0;color:var(--muted);line-height:1.6}.upload-zone{display:grid;grid-template-columns:auto 1fr minmax(220px,.8fr);gap:16px;align-items:center;margin-bottom:24px;padding:20px;border:1px dashed #c4b5fd;background:#f8f7ff}.upload-zone>.q-icon{padding:10px;background:#e9e2ff;color:var(--primary);font-size:22px}.upload-zone p,.inline-tool span{margin:4px 0 0;color:var(--muted);font-size:13px;line-height:1.5}.notice{margin-bottom:18px}.success{background:#ecfdf5;color:#065f46}.error{background:#fff1f2;color:#b91c1c}.form-grid,.bridge-fields,.generation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.span-2{grid-column:span 2}.context-field .q-field__control{background:#fcfbff}.job-description .q-field__control{min-height:220px}.inline-tool{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:20px 0;padding:16px 0;border-block:1px solid #ede9fe}.inline-tool strong,.inline-tool span{display:block}.disclosure{margin-top:8px;color:var(--ink);font-weight:700}.disclosure-copy,.bridge-content{padding:8px 16px 18px;color:var(--muted);font-size:13px;line-height:1.6}.context-preview{max-height:280px;overflow:auto;margin:0 16px 16px;padding:14px;background:#17142e;color:#e9e7ff;white-space:pre-wrap;font:12px/1.55 ui-monospace,monospace}.bridge-fields{grid-template-columns:repeat(3,minmax(0,1fr))}.bridge-status{color:var(--muted)}.action-row{display:flex;align-items:center;gap:12px;margin-top:36px;padding-top:20px;border-top:1px solid #ede9fe}.action-row>span{margin-left:auto;color:var(--muted);font-size:13px}.match-hero{display:grid;grid-template-columns:240px 1fr;margin-bottom:20px;border:1px solid var(--line)}.score-block{display:flex;flex-direction:column;justify-content:center;min-height:240px;padding:30px;background:var(--ink);color:#fff}.score-block p{margin:0 0 14px;color:#c4b5fd;font-size:11px;font-weight:700;letter-spacing:.12em}.score-block strong{font-size:68px;line-height:1;letter-spacing:-.08em}.score-block small{font-size:20px}.score-block span{margin-top:16px;color:#bbf7d0;font-size:14px;font-weight:700}.match-summary{padding:30px}.match-summary h3{margin:0;font-size:25px}.match-summary>p,.gap p{color:var(--muted);line-height:1.65}.strength-list{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:24px}.strength-list span{font-size:13px}.strength-list .q-icon{color:#059669}.insight-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:20px}.card-title{display:flex;justify-content:space-between;gap:12px}.legend{display:flex;gap:12px;color:var(--muted);font-size:12px}.legend i{display:inline-block;width:9px;height:9px;margin-right:4px;border-radius:50%}.candidate{background:var(--primary)}.role{background:var(--accent)}svg{display:block;width:100%;max-height:280px;margin-top:10px;overflow:visible}.radar-grid{fill:#faf9ff;stroke:#ddd6fe}.axis{stroke:#ddd6fe}.candidate-shape{fill:rgba(124,58,237,.2);stroke:var(--primary);stroke-width:2}.role-shape{fill:rgba(8,145,178,.15);stroke:var(--accent);stroke-width:2}.radar-label{fill:#475569;font-size:8px}.gap{display:flex;gap:12px;padding:18px 0;border-bottom:1px solid #ede9fe}.gap>.q-icon{height:max-content;margin-top:2px;padding:4px;border-radius:50%;background:#fef3c7;color:#a16207}.gap p{margin:5px 0 9px;font-size:13px}.coming-soon{display:flex;gap:16px;padding:28px;margin-bottom:24px;border-left:3px solid var(--primary);background:#f3efff}.coming-soon>.q-icon{font-size:28px;color:var(--primary)}.coming-soon p{margin:4px 0 0;color:var(--muted)}.q-btn{min-height:44px}.q-btn:focus-visible,.step-link:focus-visible{outline:3px solid var(--accent);outline-offset:3px}@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}@media(max-width:900px){.workspace{padding:48px 20px 72px}.app-frame{grid-template-columns:1fr;gap:24px}.progress-nav{position:static;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0}.nav-kicker,.nav-note,.step-link small{display:none}.step-link{min-height:72px;padding:10px;border:1px solid var(--line)}.step-link.active{border:2px solid var(--primary)}.task-view{padding:30px}}@media(max-width:640px){.header-inner{padding:0 16px}.privacy-chip{display:none}.workspace{padding:36px 14px 56px}.intro{text-align:left}.intro h1{font-size:38px}.intro>p:last-child{margin-left:0}.progress-nav{overflow:auto;grid-template-columns:repeat(4,120px)}.task-view{padding:24px 18px}.task-heading{display:block}.task-heading>.q-btn{margin-top:10px}.upload-zone,.form-grid,.bridge-fields,.insight-grid,.generation-grid,.match-hero{grid-template-columns:1fr}.span-2{grid-column:auto}.inline-tool{align-items:flex-start;flex-direction:column}.action-row{flex-wrap:wrap}.action-row>span{order:3;width:100%;margin:0;text-align:center}.score-block{min-height:180px}.match-summary{padding:24px}.card-title{display:block}.legend{margin-top:10px}}
 </style>
