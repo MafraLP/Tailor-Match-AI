@@ -1,0 +1,2 @@
+<script setup>defineProps({ status: String, error: String }); const emit = defineEmits(["back"]);</script>
+<template><section class="screen analysis"><q-spinner-orbit color="primary" size="72px"/><p class="eyebrow">ETAPA 3 DE 4 · ANÁLISE</p><h1>Analisando compatibilidade.</h1><p>{{ status || 'Montando o pacote revisado e aguardando a bridge local.' }}</p><q-banner v-if="error" class="notice error" role="alert">{{ error }}</q-banner><q-btn flat no-caps label="Voltar para a vaga" @click="emit('back')"/></section></template>

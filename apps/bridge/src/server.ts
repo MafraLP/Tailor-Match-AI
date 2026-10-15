@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { strategyFor } from "./strategies.js";
 import type { BridgeRequest } from "./types.js";
 import { validateOutput } from "./contracts.js";
+import { exportApplication } from "./exportApplication.js";
 
 const host = "127.0.0.1";
 const port = Number(process.env.TAILOR_MATCH_BRIDGE_PORT ?? 4317);
@@ -29,7 +30,7 @@ function reply(response: import("node:http").ServerResponse, status: number, bod
 
 createServer((request, response) => {
   if (request.method === "OPTIONS") return reply(response, 204, {});
-  if (request.method !== "POST" || request.url !== "/v1/execute") return reply(response, 404, { error: "Not found" });
+  if (request.method !== "POST" || !["/v1/execute", "/v1/export"].includes(request.url ?? "")) return reply(response, 404, { error: "Not found" });
   let body = "";
   request.on("data", (chunk) => {
     body += chunk;
@@ -38,6 +39,12 @@ createServer((request, response) => {
   request.on("end", async () => {
     try {
       const payload = JSON.parse(body) as unknown;
+      if (request.url === "/v1/export") {
+        if (!payload || typeof payload !== "object") return reply(response, 400, { error: "Invalid export request" });
+        const value = payload as { outputDirectory?: unknown; jobTitle?: unknown; documents?: unknown; context?: unknown; evaluation?: unknown };
+        if (typeof value.outputDirectory !== "string" || typeof value.jobTitle !== "string" || !value.documents || typeof value.documents !== "object") return reply(response, 400, { error: "Invalid export request" });
+        return reply(response, 200, await exportApplication({ outputDirectory: value.outputDirectory, jobTitle: value.jobTitle, documents: value.documents as import("./types.js").GeneratedDocuments, context: value.context, evaluation: value.evaluation }));
+      }
       if (!isRequest(payload)) return reply(response, 400, { error: "Invalid bridge request" });
       const result = await strategyFor(payload).execute(payload);
       reply(response, 200, { ...result, output: validateOutput(payload, result.output) });

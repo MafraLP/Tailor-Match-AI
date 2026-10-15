@@ -4,7 +4,7 @@ const key = "draft";
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(database, 1);
+    const request = indexedDB.open(database, 2);
     request.onupgradeneeded = () => request.result.createObjectStore(store);
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);

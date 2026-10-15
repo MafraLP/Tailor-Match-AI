@@ -7,7 +7,7 @@ test("keeps raw stories distinct from confirmed evidence", () => {
   const job = { url: "", description: "", normalizedDescription: " Construir APIs. " };
   const context = buildContextPackage(profile, job);
 
-  assert.equal(context.profile.confirmedEvidence, "Entreguei APIs.");
+  assert.equal(context.profile.confirmedEvidence, "Entreguei APIs. \n\nVue");
   assert.equal(context.profile.rawContext, "Fiz um hackathon.");
   assert.equal(context.job.description, "Construir APIs.");
 });
